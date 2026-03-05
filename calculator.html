@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regression Calculator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #fff; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Times New Roman', Times, serif;
+    }
+    .buttons { display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center; padding: 2rem; }
+    .btn {
+      width: 160px; height: 160px; border: none; border-radius: 20px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 0.5rem; transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-lip { background: #6a9e4f; }
+    .btn-prt { background: #c45e35; }
+    .btn-cho { background: #2e86a8; }
+    .btn:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+    .btn:active { transform: translateY(-1px) scale(0.98); }
+    .btn-label { font-family: 'Times New Roman', Times, serif; font-size: 2rem; font-weight: 700; color: #fff; }
+    .btn-desc  { font-family: 'Times New Roman', Times, serif; font-size: 0.75rem; color: #fff; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+    .screen { position: fixed; inset: 0; background: #fff; flex-direction: column; display: none; }
+    .screen.active { display: flex; }
+    .screen-header { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 1.5rem; color: #fff; }
+    .back-btn {
+      background: rgba(255,255,255,0.25); border: none; color: #fff;
+      font-size: 0.85rem; padding: 0.4rem 0.9rem; border-radius: 8px; cursor: pointer;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.4); }
+    .screen-title { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.05em; }
+    .sheet-wrap { flex: 1; overflow: auto; padding: 1.5rem; display: flex; flex-direction: row; align-items: flex-start; gap: 3.5rem; }
+    .table-title {
+      font-size: 0.85rem; font-weight: bold; color: #444; text-align: center;
+      background: #f0f0f0; border: 1px solid #ccc; padding: 0.3rem 1rem;
+    }
+    .sheet { border-collapse: collapse; }
+    .sheet th { background: #f0f0f0; border: 1px solid #ccc; padding: 0.3rem 1rem; font-size: 0.85rem; text-align: center; vertical-align: middle; color: #444; min-width: 90px; }
+    .sheet td { border: 1px solid #ddd; padding: 0; vertical-align: middle; }
+    .row-num { background: #f7f7f7; border: 1px solid #ccc; padding: 0.3rem 0.5rem; font-size: 0.8rem; color: #999; text-align: center; vertical-align: middle; min-width: 32px; }
+    .sheet td input { width: 90px; padding: 0.3rem 0.4rem; border: none; outline: none; font-size: 0.85rem; text-align: center; background: transparent; display: block; font-family: 'Times New Roman', Times, serif; }
+    .sheet td input:focus { background: #eaf4ff; }
+    .avg-input { background: #f7faf5 !important; color: #3a7a2a; font-weight: bold; }
+    .stat-label { background: #f0f0f0; padding: 0.3rem 0.8rem; font-size: 0.85rem; color: #444; font-weight: bold; white-space: nowrap; border: 1px solid #ddd; }
+    .stat-val { background: #f7faf5; color: #3a7a2a; font-weight: bold; width: 110px; padding: 0.3rem 0.4rem; border: none; outline: none; font-size: 0.85rem; text-align: center; display: block; font-family: 'Times New Roman', Times, serif; }
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body>
+
+  <!-- Home -->
+  <div class="buttons" id="home">
+    <button class="btn btn-lip" onclick="openCalc('LIP')"><span class="btn-label">LIP</span><span class="btn-desc">Lipid</span></button>
+    <button class="btn btn-prt" onclick="openCalc('PRT')"><span class="btn-label">PRT</span><span class="btn-desc">Protein</span></button>
+    <button class="btn btn-cho" onclick="openCalc('CHO')"><span class="btn-label">CHO</span><span class="btn-desc">Carbohydrate</span></button>
+  </div>
+
+  <!-- LIP Screen -->
+  <div class="screen" id="screen-LIP">
+    <div class="screen-header" style="background:#6a9e4f;">
+      <button class="back-btn" onclick="goBack()">Back</button>
+      <span class="screen-title">Lipid Standard Calculator</span>
+      <button class="back-btn" onclick="resetCalc('LIP')" style="margin-left:auto;">Reset</button>
+      <button class="back-btn" onclick="addValueCol('LIP')" id="LIP-add-col-btn">+ Add Column</button>
+    </div>
+    <div class="sheet-wrap" id="LIP-sheet-wrap">
+      <table class="sheet"><thead><tr id="LIP-header-row"><th></th><th>Value</th><th>Average</th></tr></thead><tbody id="LIP-tbody"></tbody></table>
+      <div style="display:flex;flex-direction:column;gap:1.5rem;flex-shrink:0;">
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title">Low Standard</div><table class="sheet"><tbody id="LIP-ls-tbody"></tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="LIP-ls-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="LIP-ls-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="LIP-ls-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><canvas id="LIP-ls-chart" width="280" height="180" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title">Standard</div><table class="sheet"><tbody id="LIP-st-tbody"></tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="LIP-st-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="LIP-st-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="LIP-st-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><canvas id="LIP-st-chart" width="280" height="180" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title" style="width:fit-content;">All</div><canvas id="LIP-all-chart" width="280" height="176" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="LIP-all-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="LIP-all-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="LIP-all-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRT Screen -->
+  <div class="screen" id="screen-PRT">
+    <div class="screen-header" style="background:#c45e35;">
+      <button class="back-btn" onclick="goBack()">Back</button>
+      <span class="screen-title">Protein Standard Calculator</span>
+      <button class="back-btn" onclick="resetCalc('PRT')" style="margin-left:auto;">Reset</button>
+      <button class="back-btn" onclick="addValueCol('PRT')" id="PRT-add-col-btn">+ Add Column</button>
+    </div>
+    <div class="sheet-wrap" id="PRT-sheet-wrap">
+      <table class="sheet"><thead><tr id="PRT-header-row"><th></th><th>Value</th><th>Average</th></tr></thead><tbody id="PRT-tbody"></tbody></table>
+      <div style="display:flex;flex-direction:column;gap:1.5rem;flex-shrink:0;">
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title">Low Standard</div><table class="sheet"><tbody id="PRT-ls-tbody"></tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="PRT-ls-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="PRT-ls-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="PRT-ls-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><canvas id="PRT-ls-chart" width="280" height="180" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title">Standard</div><table class="sheet"><tbody id="PRT-st-tbody"></tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="PRT-st-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="PRT-st-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="PRT-st-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><canvas id="PRT-st-chart" width="280" height="180" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title" style="width:fit-content;">All</div><canvas id="PRT-all-chart" width="280" height="176" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="PRT-all-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="PRT-all-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="PRT-all-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHO Screen -->
+  <div class="screen" id="screen-CHO">
+    <div class="screen-header" style="background:#2e86a8;">
+      <button class="back-btn" onclick="goBack()">Back</button>
+      <span class="screen-title">Carbohydrate Standard Calculator</span>
+      <button class="back-btn" onclick="resetCalc('CHO')" style="margin-left:auto;">Reset</button>
+      <button class="back-btn" onclick="addValueCol('CHO')" id="CHO-add-col-btn">+ Add Column</button>
+    </div>
+    <div class="sheet-wrap" id="CHO-sheet-wrap">
+      <table class="sheet"><thead><tr id="CHO-header-row"><th></th><th>Value</th><th>Average</th></tr></thead><tbody id="CHO-tbody"></tbody></table>
+      <div style="display:flex;flex-direction:column;gap:1.5rem;flex-shrink:0;">
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title">Low Standard</div><table class="sheet"><tbody id="CHO-ls-tbody"></tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="CHO-ls-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="CHO-ls-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="CHO-ls-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><canvas id="CHO-ls-chart" width="280" height="180" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title">Standard</div><table class="sheet"><tbody id="CHO-st-tbody"></tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="CHO-st-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="CHO-st-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="CHO-st-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><canvas id="CHO-st-chart" width="280" height="180" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+        </div>
+        <div style="display:flex;flex-direction:row;align-items:flex-start;gap:1rem;">
+          <div><div class="table-title" style="width:fit-content;">All</div><canvas id="CHO-all-chart" width="280" height="176" style="border:1px solid #ddd;background:#fff;display:block;"></canvas></div>
+          <div><div class="table-title" style="visibility:hidden;">-</div><table class="sheet"><tbody>
+            <tr><td class="stat-label">Slope</td><td><input class="stat-val" id="CHO-all-slope" type="text" readonly></td></tr>
+            <tr><td class="stat-label">Intercept</td><td><input class="stat-val" id="CHO-all-intercept" type="text" readonly></td></tr>
+            <tr><td class="stat-label">R²</td><td><input class="stat-val" id="CHO-all-r2" type="text" readonly></td></tr>
+          </tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var ROWS = 20;
+
+    var CONFIG = {
+      LIP: { lsFixed: [0,5,10,20,35,50],   stFixed: [0,50,100,200,350,500],  valCols: 1 },
+      PRT: { lsFixed: [0,2,4,8,14,20],      stFixed: [0,20,40,80,140,200],    valCols: 1 },
+      CHO: { lsFixed: [0,2,4,8,14,20],      stFixed: [0,20,40,80,140,200],    valCols: 1 }
+    };
+
+    /* ── Build main table row ── */
+    function buildRow(t, rowNum, numValCols) {
+      var tr = document.createElement('tr');
+      var html = '<td class="row-num" style="vertical-align:middle;text-align:center;height:30px;">' + rowNum + '</td>';
+      for (var c = 1; c <= numValCols; c++) {
+        html += '<td><input type="number" step="any" id="' + t + '-v-' + c + '-' + rowNum + '"'
+              + ' oninput="calcAvg(\'' + t + '\',' + rowNum + ')"'
+              + ' onkeydown="handleEnter(event,\'' + t + '\',' + rowNum + ',' + c + ')"'
+              + ' onpaste="handlePaste(event,\'' + t + '\',' + rowNum + ',' + c + ')"></td>';
+      }
+      if (rowNum % 2 === 0) {
+        html += '<td><input class="avg-input" type="text" id="' + t + '-avg-' + rowNum + '" readonly></td>';
+      } else {
+        html += '<td><input type="text" readonly style="background:#fff;"></td>';
+      }
+      tr.innerHTML = html;
+      return tr;
+    }
+
+    /* ── Build side table ── */
+    function buildSideTable(t, tbodyId, prefix, fixedVals) {
+      var tbody = document.getElementById(tbodyId);
+      var fxStyle = 'background:#f7f7f7;color:#999;font-weight:bold;width:90px;display:block;text-align:center;padding:0.3rem 0.4rem;border:none;outline:none;font-family:"Times New Roman",serif;font-size:0.85rem;';
+      var avStyle = 'background:#f7faf5;color:#3a7a2a;font-weight:bold;width:90px;display:block;text-align:center;padding:0.3rem 0.4rem;border:none;outline:none;font-family:"Times New Roman",serif;font-size:0.85rem;';
+      for (var i = 1; i <= 6; i++) {
+        var tr = document.createElement('tr');
+        var left  = '<td><input type="text" value="' + fixedVals[i-1] + '" readonly style="' + fxStyle + '"></td>';
+        var right = (i === 1)
+          ? '<td><input type="text" value="0" readonly style="' + fxStyle + '"></td>'
+          : '<td><input type="text" id="' + t + '-' + prefix + '-v2-' + i + '" readonly style="' + avStyle + '"></td>';
+        tr.innerHTML = left + right;
+        tbody.appendChild(tr);
+      }
+    }
+
+    /* ── Init all calculators ── */
+    ['LIP','PRT','CHO'].forEach(function(t) {
+      var tbody = document.getElementById(t + '-tbody');
+      for (var i = 1; i <= ROWS; i++) tbody.appendChild(buildRow(t, i, 1));
+      buildSideTable(t, t + '-ls-tbody', 'ls', CONFIG[t].lsFixed);
+      buildSideTable(t, t + '-st-tbody', 'st', CONFIG[t].stFixed);
+      drawChart(t, 'ls', [], [], 0, 0);
+      drawChart(t, 'st', [], [], 0, 0);
+      drawAllChart(t);
+    });
+
+    /* ── Calc Average ── */
+    function calcAvg(t, rowNum) {
+      var evenRow = (rowNum % 2 === 0) ? rowNum : rowNum + 1;
+      var oddRow  = evenRow - 1;
+      var avgEl   = document.getElementById(t + '-avg-' + evenRow);
+      if (!avgEl) return;
+      var sum = 0, count = 0;
+      var cols = CONFIG[t].valCols;
+      for (var c = 1; c <= cols; c++) {
+        var e1 = document.getElementById(t + '-v-' + c + '-' + oddRow);
+        var e2 = document.getElementById(t + '-v-' + c + '-' + evenRow);
+        if (e1 && e1.value !== '' && !isNaN(parseFloat(e1.value))) { sum += parseFloat(e1.value); count++; }
+        if (e2 && e2.value !== '' && !isNaN(parseFloat(e2.value))) { sum += parseFloat(e2.value); count++; }
+      }
+      var avgVal = count > 0 ? (sum / count).toFixed(5) : '';
+      avgEl.value = avgVal;
+
+      var lsMap = {2:2, 4:3, 6:4, 8:5, 10:6};
+      if (lsMap[evenRow]) {
+        var lsCell = document.getElementById(t + '-ls-v2-' + lsMap[evenRow]);
+        if (lsCell) { lsCell.value = avgVal; calcReg(t, 'ls'); }
+      }
+      var stMap = {12:2, 14:3, 16:4, 18:5, 20:6};
+      if (stMap[evenRow]) {
+        var stCell = document.getElementById(t + '-st-v2-' + stMap[evenRow]);
+        if (stCell) { stCell.value = avgVal; calcReg(t, 'st'); }
+      }
+    }
+
+    /* ── Key navigation ── */
+    function handleEnter(e, t, row, col) {
+      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        var next = document.getElementById(t + '-v-' + col + '-' + (row + 1));
+        if (next) next.focus();
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        var prev = document.getElementById(t + '-v-' + col + '-' + (row - 1));
+        if (prev) prev.focus();
+      }
+    }
+
+    /* ── Paste ── */
+    function handlePaste(e, t, startRow, startCol) {
+      var text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!text || (text.indexOf('\t') === -1 && text.indexOf('\n') === -1)) return;
+      e.preventDefault();
+      var lines = text.replace(/\r/g, '').split('\n');
+      if (lines[lines.length - 1] === '') lines.pop();
+      for (var r = 0; r < lines.length; r++) {
+        var cols = lines[r].split('\t');
+        for (var c = 0; c < cols.length; c++) {
+          var cell = document.getElementById(t + '-v-' + (startCol + c) + '-' + (startRow + r));
+          if (cell) { cell.value = cols[c].trim(); calcAvg(t, startRow + r); }
+        }
+      }
+    }
+
+    /* ── Add Value Column ── */
+    function addValueCol(t) {
+      if (CONFIG[t].valCols >= 2) return;
+      CONFIG[t].valCols = 2;
+      var headerRow = document.getElementById(t + '-header-row');
+      headerRow.querySelectorAll('th')[1].textContent = 'Value 1';
+      var btn = document.getElementById(t + '-add-col-btn');
+      btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'default';
+      var newTh = document.createElement('th');
+      newTh.textContent = 'Value 2';
+      headerRow.insertBefore(newTh, headerRow.lastElementChild);
+      document.getElementById(t + '-tbody').querySelectorAll('tr').forEach(function(tr, idx) {
+        var rn = idx + 1;
+        var newTd = document.createElement('td');
+        newTd.innerHTML = '<input type="number" step="any" id="' + t + '-v-2-' + rn + '"'
+          + ' oninput="calcAvg(\'' + t + '\',' + rn + ')"'
+          + ' onkeydown="handleEnter(event,\'' + t + '\',' + rn + ',2)"'
+          + ' onpaste="handlePaste(event,\'' + t + '\',' + rn + ',2)">';
+        tr.insertBefore(newTd, tr.lastElementChild);
+      });
+    }
+
+    /* ── Reset ── */
+    function resetCalc(t) {
+      CONFIG[t].valCols = 1;
+      var headerRow = document.getElementById(t + '-header-row');
+      var ths = headerRow.querySelectorAll('th');
+      for (var i = ths.length - 2; i >= 1; i--) headerRow.removeChild(ths[i]);
+      var newTh = document.createElement('th'); newTh.textContent = 'Value';
+      headerRow.insertBefore(newTh, headerRow.lastElementChild);
+      var tbody = document.getElementById(t + '-tbody');
+      tbody.innerHTML = '';
+      for (var r = 1; r <= ROWS; r++) tbody.appendChild(buildRow(t, r, 1));
+      var btn = document.getElementById(t + '-add-col-btn');
+      btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
+      for (var i = 2; i <= 6; i++) {
+        var lsEl = document.getElementById(t + '-ls-v2-' + i);
+        var stEl = document.getElementById(t + '-st-v2-' + i);
+        if (lsEl) lsEl.value = '';
+        if (stEl) stEl.value = '';
+      }
+      ['ls-slope','ls-intercept','ls-r2','st-slope','st-intercept','st-r2','all-slope','all-intercept','all-r2'].forEach(function(id) {
+        var el = document.getElementById(t + '-' + id);
+        if (el) el.value = '';
+      });
+      drawChart(t, 'ls', [], [], 0, 0);
+      drawChart(t, 'st', [], [], 0, 0);
+      drawAllChart(t);
+    }
+
+    /* ── Regression ── */
+    function calcReg(t, prefix) {
+      var fixedVals = (prefix === 'ls') ? CONFIG[t].lsFixed : CONFIG[t].stFixed;
+      var xs = [0], ys = [0];
+      for (var i = 2; i <= 6; i++) {
+        var el = document.getElementById(t + '-' + prefix + '-v2-' + i);
+        if (el && el.value !== '') {
+          var v = parseFloat(el.value);
+          if (!isNaN(v)) { xs.push(v); ys.push(fixedVals[i-1]); }
+        }
+      }
+      var n = xs.length;
+      if (n < 2) {
+        document.getElementById(t + '-' + prefix + '-slope').value = '';
+        document.getElementById(t + '-' + prefix + '-intercept').value = '';
+        document.getElementById(t + '-' + prefix + '-r2').value = '';
+        drawChart(t, prefix, [], [], 0, 0);
+        drawAllChart(t);
+        return;
+      }
+      var sumX=0, sumY=0, sumXY=0, sumX2=0;
+      for (var k=0; k<n; k++) { sumX+=xs[k]; sumY+=ys[k]; sumXY+=xs[k]*ys[k]; sumX2+=xs[k]*xs[k]; }
+      var slope     = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX);
+      var intercept = (sumY - slope*sumX) / n;
+      var yMean = sumY/n, ssTot=0, ssRes=0;
+      for (var m=0; m<n; m++) { ssTot+=Math.pow(ys[m]-yMean,2); ssRes+=Math.pow(ys[m]-(slope*xs[m]+intercept),2); }
+      var r2 = ssTot===0 ? 1 : 1 - ssRes/ssTot;
+      document.getElementById(t + '-' + prefix + '-slope').value     = slope.toFixed(5);
+      document.getElementById(t + '-' + prefix + '-intercept').value = intercept.toFixed(5);
+      document.getElementById(t + '-' + prefix + '-r2').value        = r2.toFixed(5);
+      drawChart(t, prefix, xs, ys, slope, intercept);
+      drawAllChart(t);
+    }
+
+    /* ── Draw individual chart ── */
+    function drawChart(t, prefix, xs, ys, slope, intercept) {
+      var canvas = document.getElementById(t + '-' + prefix + '-chart');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width, H = canvas.height;
+      var pad = { top:15, right:15, bottom:30, left:40 };
+      ctx.clearRect(0, 0, W, H);
+
+      // Grid
+      ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+      for (var g=1; g<4; g++) {
+        var gx = pad.left + (W-pad.left-pad.right)*g/4;
+        var gy = pad.top  + (H-pad.top-pad.bottom)*g/4;
+        ctx.beginPath(); ctx.moveTo(gx,pad.top); ctx.lineTo(gx,H-pad.bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pad.left,gy); ctx.lineTo(W-pad.right,gy); ctx.stroke();
+      }
+      // Axes
+      ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.left,pad.top); ctx.lineTo(pad.left,H-pad.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pad.left,H-pad.bottom); ctx.lineTo(W-pad.right,H-pad.bottom); ctx.stroke();
+
+      if (xs.length < 2) return;
+      var xMin=Math.min.apply(null,xs), xMax=Math.max.apply(null,xs);
+      var yMin=Math.min.apply(null,ys), yMax=Math.max.apply(null,ys);
+      var xRange=xMax-xMin||1, yRange=yMax-yMin||1;
+      function px(x){ return pad.left+(x-xMin)/xRange*(W-pad.left-pad.right); }
+      function py(y){ return H-pad.bottom-(y-yMin)/yRange*(H-pad.top-pad.bottom); }
+
+      ctx.fillStyle='#999'; ctx.font='10px Times New Roman';
+      ctx.textAlign='center'; ctx.fillText(xMin.toFixed(2),pad.left,H-10); ctx.fillText(xMax.toFixed(2),W-pad.right,H-10);
+      ctx.textAlign='right'; ctx.fillText(yMin.toFixed(0),pad.left-3,H-pad.bottom); ctx.fillText(yMax.toFixed(0),pad.left-3,pad.top+5);
+
+      ctx.strokeStyle='#6a9e4f'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(px(xMin),py(slope*xMin+intercept)); ctx.lineTo(px(xMax),py(slope*xMax+intercept)); ctx.stroke();
+
+      ctx.fillStyle='#c45e35';
+      for (var i=0; i<xs.length; i++) { ctx.beginPath(); ctx.arc(px(xs[i]),py(ys[i]),4,0,Math.PI*2); ctx.fill(); }
+    }
+
+    /* ── Draw All chart ── */
+    function drawAllChart(t) {
+      var canvas = document.getElementById(t + '-all-chart');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var W = canvas.width, H = canvas.height;
+      var pad = { top:15, right:15, bottom:30, left:45 };
+      ctx.clearRect(0, 0, W, H);
+
+      var lsFixed = CONFIG[t].lsFixed, stFixed = CONFIG[t].stFixed;
+
+      var lsXs=[0], lsYs=[0];
+      for (var i=2; i<=6; i++) {
+        var el = document.getElementById(t + '-ls-v2-' + i);
+        if (el && el.value!=='') { var v=parseFloat(el.value); if(!isNaN(v)){lsXs.push(v);lsYs.push(lsFixed[i-1]);} }
+      }
+      var stXs=[0], stYs=[0];
+      for (var j=2; j<=6; j++) {
+        var el2 = document.getElementById(t + '-st-v2-' + j);
+        if (el2 && el2.value!=='') { var v2=parseFloat(el2.value); if(!isNaN(v2)){stXs.push(v2);stYs.push(stFixed[j-1]);} }
+      }
+      var allXs=lsXs.concat(stXs), allYs=lsYs.concat(stYs);
+      var calcXs=lsXs.concat(stXs.slice(1)), calcYs=lsYs.concat(stYs.slice(1));
+
+      // Grid
+      ctx.strokeStyle='#ddd'; ctx.lineWidth=1;
+      for (var g=1; g<4; g++) {
+        var gx=pad.left+(W-pad.left-pad.right)*g/4;
+        var gy=pad.top+(H-pad.top-pad.bottom)*g/4;
+        ctx.beginPath(); ctx.moveTo(gx,pad.top); ctx.lineTo(gx,H-pad.bottom); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pad.left,gy); ctx.lineTo(W-pad.right,gy); ctx.stroke();
+      }
+      // Axes
+      ctx.strokeStyle='#ccc'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(pad.left,pad.top); ctx.lineTo(pad.left,H-pad.bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(pad.left,H-pad.bottom); ctx.lineTo(W-pad.right,H-pad.bottom); ctx.stroke();
+
+      var hasReal = (lsXs.length>1 || stXs.length>1);
+      if (!hasReal || calcXs.length < 3) {
+        ['all-slope','all-intercept','all-r2'].forEach(function(id){ var el=document.getElementById(t+'-'+id); if(el) el.value=''; });
+        return;
+      }
+
+      var xMin=Math.min.apply(null,allXs), xMax=Math.max.apply(null,allXs);
+      var yMin=Math.min.apply(null,allYs), yMax=Math.max.apply(null,allYs);
+      var xRange=xMax-xMin||1, yRange=yMax-yMin||1;
+      function px(x){ return pad.left+(x-xMin)/xRange*(W-pad.left-pad.right); }
+      function py(y){ return H-pad.bottom-(y-yMin)/yRange*(H-pad.top-pad.bottom); }
+
+      ctx.fillStyle='#999'; ctx.font='10px Times New Roman';
+      ctx.textAlign='center'; ctx.fillText(xMin.toFixed(2),pad.left,H-10); ctx.fillText(xMax.toFixed(2),W-pad.right,H-10);
+      ctx.textAlign='right'; ctx.fillText(yMin.toFixed(0),pad.left-3,H-pad.bottom); ctx.fillText(yMax.toFixed(0),pad.left-3,pad.top+5);
+
+      var n=calcXs.length, sumX=0,sumY=0,sumXY=0,sumX2=0;
+      for (var k=0;k<n;k++){sumX+=calcXs[k];sumY+=calcYs[k];sumXY+=calcXs[k]*calcYs[k];sumX2+=calcXs[k]*calcXs[k];}
+      var denom=n*sumX2-sumX*sumX;
+      if (denom===0) return;
+      var aSlope=(n*sumXY-sumX*sumY)/denom;
+      var aInt=(sumY-aSlope*sumX)/n;
+      var yMean=sumY/n, ssTot=0, ssRes=0;
+      for (var m=0;m<n;m++){ssTot+=Math.pow(calcYs[m]-yMean,2);ssRes+=Math.pow(calcYs[m]-(aSlope*calcXs[m]+aInt),2);}
+      var aR2=ssTot===0?1:1-ssRes/ssTot;
+      document.getElementById(t+'-all-slope').value     = aSlope.toFixed(5);
+      document.getElementById(t+'-all-intercept').value = aInt.toFixed(5);
+      document.getElementById(t+'-all-r2').value        = aR2.toFixed(5);
+
+      ctx.strokeStyle='#444'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(px(xMin),py(aSlope*xMin+aInt)); ctx.lineTo(px(xMax),py(aSlope*xMax+aInt)); ctx.stroke();
+
+      ctx.fillStyle='#6a9e4f';
+      for (var a=0;a<lsXs.length;a++){ctx.beginPath();ctx.arc(px(lsXs[a]),py(lsYs[a]),4,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle='#2e86a8';
+      for (var b=0;b<stXs.length;b++){ctx.beginPath();ctx.arc(px(stXs[b]),py(stYs[b]),4,0,Math.PI*2);ctx.fill();}
+    }
+
+    /* ── Navigation ── */
+    function openCalc(type) {
+      document.getElementById('home').style.display = 'none';
+      document.getElementById('screen-' + type).classList.add('active');
+    }
+    function goBack() {
+      document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+      document.getElementById('home').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
